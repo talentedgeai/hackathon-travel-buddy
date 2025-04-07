@@ -524,6 +524,44 @@ sequenceDiagram
 - Adoption of edge computing for latency-sensitive operations
 </solution>
 
+# Objectives and Milestones
+
+| Objective                       | Milestone                                                               | Target Completion Date | Status      | Note                                                                                     |
+| :------------------------------ | :---------------------------------------------------------------------- | :--------------------- | :---------- | :--------------------------------------------------------------------------------------- |
+| Personalized Recommendations    | User can input locations & durations via NextJS App                       | TBD                    | Not Started | Allow multiple locations/durations.                                                      |
+| Personalized Recommendations    | AI processes input & generates ranked tour recommendations              | TBD                    | Not Started | Use LlamaIndex/RAG with vector search & weighted ranking based on all user criteria. |
+| Personalized Recommendations    | Send recommendations via WhatsApp                                       | TBD                    | Not Started | Requires WhatsApp Integration Service and API connection.                                |
+| Seamless Tour Booking           | Simple tour booking process (redirect)                                  | TBD                    | Not Started | Redirect user to external provider site from link in WhatsApp/App.                   |
+| Convenient Accommodation        | Recommend external accommodation upon request                           | TBD                    | Not Started | Use secondary Accommodation Engine (LLM + Search). Triggered explicitly by user.         |
+| Core WhatsApp Interaction       | Basic WhatsApp interaction for queries/management via Integration Service | TBD                    | Not Started | Foundation for other WhatsApp features.                                                  |
+
+# AI Model Specific Tasks Progress
+
+| Task                                                            | Current Status | Notes / Adjustments Needed                                                         |
+| :-------------------------------------------------------------- | :------------- | :--------------------------------------------------------------------------------- |
+| Setup Supabase Database Schema & Vector Extension               | In Progress    | Define tables (`users`, `locations`, `providers`, `travel_packages`, `user_interests`). |
+| Develop NextJS Frontend for User Registration & Preference Input| In Progress    | Implement UI components, Facebook Auth integration (NextAuth).                   |
+| Develop Python API Gateway (FastAPI)                            | In Progress    | Endpoints for auth, preferences, recommendations; service coordination.          |
+| Implement Facebook Authentication Flow (Backend)                | In Progress    | Handle OAuth callback, user creation/retrieval in DB via API.                      |
+| Develop Data Ingestion Pipeline for Tour Packages              | In Progress    | Process provider data, generate vector embeddings, store in Supabase.              |
+| Develop Recommendation Logic (Primary Engine - LlamaIndex/RAG) | In Progress    | Implement weighted ranking algorithm using vector similarity search.               |
+| Develop WhatsApp Integration Service                            | In Progress    | Handle incoming/outgoing messages, templates, session management (if needed).    |
+| Setup LLM & Internet Search Integration (Secondary Acc. Engine) | In Progress    | Select providers/models, configure API access for the secondary engine.          |
+| Develop Accommodation Search Logic (Secondary Engine)           | In Progress    | Implement LLM query generation and search result processing for explicit requests. |
+| Evaluate Recommendation Engine Performance                      | In Progress    | Define metrics (e.g., relevance, diversity); test against ranking criteria.      |
+| Evaluate Secondary Accommodation Engine Performance             | In Progress    | Define metrics (e.g., accuracy, relevance to explicit request).                 |
+
+# Business Model Specific Tasks Progress
+
+| Task                                          | Current Status | Notes / Adjustments Needed                                       |
+| :-------------------------------------------- | :------------- | :--------------------------------------------------------------- |
+| Define Target Audience & Market Analysis      | Not Started    | Research tourist demographics, competitor analysis.              |
+| Develop Partnerships (Tour Agencies/Guides) | Not Started    | Identify potential partners, define collaboration terms.         |
+| Finalize Monetization Strategy                | Not Started    | e.g., Commission model, subscription, advertising?             |
+| Develop Marketing & User Acquisition Plan   | Not Started    | Channels (social media, ads, travel blogs), launch strategy.   |
+| Define Customer Support Process               | Not Started    | How will user inquiries/issues be handled? (e.g., via WhatsApp) |
+| Address Legal & Compliance Requirements     | Not Started    | Data privacy (GDPR/local laws), Terms of Service, payment rules. |
+
 This comprehensive technical architecture solution for the Travel Buddy system addresses all the requirements while providing a scalable, secure, and user-friendly platform. The solution leverages AI technologies like LlamaIndex and RAG to deliver personalized tour recommendations, with WhatsApp as the primary interaction channel.
 
 The architecture is designed with modularity in mind, allowing components to evolve independently while maintaining system integrity. It addresses key concerns like security, scalability, and performance while providing clear integration points with external systems like Facebook authentication, WhatsApp Business API, and tour payment gateways.
