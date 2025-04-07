@@ -1,11 +1,11 @@
 # Problem Statements
-1. Tourists (both foreigners and Vietnamese) face challenges in discovering tours of interest and engaging with tour guides or companies.
-2. Booking tours and finding nearby accommoedation are often complicated and unclear.
-3. Capturing customer preferences through direct interactions is difficult.
-4. Leveraging travel history to provide personalized recommendations is under utilized
+1. Tourists (both international and domestic) face challenges discovering relevant tours and effectively engaging with tour guides or companies.
+2. The process of booking tours and finding nearby accommodation is often complicated and lacks clarity.
+3. Capturing detailed customer preferences through direct interaction can be difficult.
+4. Leveraging users' travel history to provide personalized recommendations is currently underutilized.
 
-# Solution:
-Travel Buddy application, integrating AI-driven functionalities to address the defined objectives and problem statements. The solution prioritizes WhatsApp as the main platform  as supplementary options for broader engagement.
+# Solution
+We propose the Travel Buddy application, which integrates AI-driven functionalities to address the identified problems and objectives. The solution prioritizes WhatsApp as the primary user interaction platform, complemented by a web application for broader engagement and detailed preference input.
 
 
 # User Stories
@@ -16,31 +16,30 @@ Travel Buddy application, integrating AI-driven functionalities to address the d
 *   As a Tourist, I want a simple and clear process to book a tour once I've decided on one so that I don't get frustrated or confused during the booking.
 *   As a Tourist, I want to get recommendations for nearby accommodation (hotels, hostels) for a booked tour so that I can conveniently plan where to stay.
 
-# User action flow
-- User logon to Travel Buddy using their Facebook account. User profile will be captured into users table.
-- User select the list of tour locations user want to take and fill in the following information per tour location:
-    - User selects budget constraints  i.e < $1000 for Hanoi tour, < 1200 for Da Nang tour, < 1500 for Ho Chi Minh tour
-    - User selects food favorites for each tour location for example: Japanese , Vietnamese street foods, Chinese fine dining restaurants.
-    - User selects preferred travel transportation such 4 seats car, intercity bus, or train or user self-arranges
-    - User selects preferred accommocations: hotels, hostels, backpackers, motels or user self-arranges,
-    - User selects activties they would like to participate such as shopping and musiuem and historical places in Ho Chi Minh tour location or for Da Nang tour visit Ba Na Hill, selfie at Golden Bridge try fresh seefoods, visit Old Quarter Hoi An. For Hanoi visit 36 streets Old Quarter, view Ngoc Son Temple and Hoan Kiem lake, Water Puppet Show, Ho Chi Minh's Mausoleum
-    - User select extra notes: prefer to stay in center city for convenience in Ho Chi Minh tour, stay close to the beach in Da Nang, stay close to nature in Hanoi, traffic noice avoidance. etc.
-- User clicks Save to query the search the tour packages
-- Travel Buddy will send a list of recommended tour packages to user WhatsApp messenger . Each item contains tour payment link and tour contact number/email
-- User clicks on a specific tour to take them to tour package site to complete the tour payment.
+# User Action Flow
+- The user logs into Travel Buddy using their Facebook account. Their profile information is captured and stored in the `users` table.
+- The user selects desired tour locations and provides the following details for each:
+    - **Budget Constraints:** Specifies maximum budget per location (e.g., < $1000 for Hanoi, < $1200 for Da Nang, < $1500 for Ho Chi Minh City).
+    - **Food Preferences:** Selects preferred cuisine types or dining styles (e.g., Japanese, Vietnamese street food, Chinese fine dining).
+    - **Transportation:** Chooses preferred travel methods (e.g., 4-seat car, intercity bus, train) or indicates self-arranged transport.
+    - **Accommodation:** Selects preferred lodging types (e.g., hotels, hostels, backpacker inns, motels) or indicates self-arranged accommodation.
+    - **Activities:** Lists desired activities for each location (e.g., Shopping, museums, historical sites in Ho Chi Minh City; Ba Na Hills visit, Golden Bridge selfie, fresh seafood, Hoi An Old Quarter visit in Da Nang; 36 Streets Old Quarter tour, Ngoc Son Temple, Hoan Kiem Lake visit, Water Puppet Show, Ho Chi Minh's Mausoleum visit in Hanoi).
+    - **Additional Notes:** Provides specific requests or preferences (e.g., "prefer central city location for convenience in Ho Chi Minh City," "stay close to the beach in Da Nang," "stay close to nature in Hanoi," "avoid traffic noise").
+- The user clicks "Save" to initiate the search for matching tour packages.
+- Travel Buddy sends a list of recommended tour packages to the user's WhatsApp messenger. Each recommendation includes:
+    - A link for tour registration and payment.
+    - Contact information (phone/email) for the tour agency.
+- The user clicks a specific tour link, which redirects them to the tour package provider's site to complete the booking and payment process.
 
-# Technical stack and implementation
-
-Using LLamaIndex framework and RAG to incoporate input data such user profiles such as hobbies, location of interests, agency tour packages to full text search and sematic search to search and sort recommended tours from highest to lowest ranks
-The system output the top 10 of tour packages with sufficient informations through restful apis as following:
- - tour package title, description summary
- - the link to complete the tour registration and payment
- - agency contacts for further infos
-
-- Frontend uses NextJS framework
-- Data Storage uses superbase
-
-Leverage LLM model with internet search to find nearby accomodation/hotels/hostels that is convenient to take the tours
+# Technical Stack and Implementation Overview
+- **Recommendation Core:** Utilize the LlamaIndex framework with Retrieval-Augmented Generation (RAG) to process input data (user profiles, preferences, tour package details). Perform full-text and semantic searches to find and rank relevant tour recommendations.
+- **API Output:** The system will provide the top 10 recommended tour packages via RESTful APIs, containing:
+    - Tour package title and summary description.
+    - Link to complete tour registration and payment.
+    - Agency contact information for further inquiries.
+- **Frontend:** Developed using the Next.js framework.
+- **Data Storage:** Implemented using Supabase (PostgreSQL with vector support).
+- **Accommodation Search (Secondary):** Leverage an LLM combined with internet search capabilities to find nearby accommodation options (hotels, hostels) when requested or needed.
 
 ## High-Level Architecture
 
