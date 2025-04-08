@@ -14,7 +14,7 @@ from app.services.embeddings import EmbeddingService
 from app.vectorstore.supabase_vectorstore import SupabaseVectorStore
 from app.tools.date.date_tool import DateExtractionTool
 from app.tools.organization.organization_tool import OrganizationValidationTool
-from app.tools.search.search_tools import SearchMeetingsTool, SearchMeetingsByOrganizationTool
+from app.tools.search.search_tools import SearchMeetingsTool, SearchMeetingsByOrganizationTool, SearchTravelPackagesTool
 from app.config.env_config import config
 
 
@@ -35,11 +35,12 @@ class AgentRag:
     def _load_organizations(self):
         """Load organizations from CSV file."""
         try:
-            df = pd.read_csv('data/Organizations-All Organizations.csv')
-            # Get unique organization names, excluding empty values
-            self.organizations = df['Account'].dropna().unique().tolist()
+            # df = None
+            # # Get unique organization names, excluding empty values
+            # self.organizations = df['Account'].dropna().unique().tolist()
+            pass
         except Exception as e:
-            print(f"Error loading organizations: {e}")
+            # print(f"Error loading organizations: {e}")
             self.organizations = [
                 '5 Elements Brewery', 'Absher Construction', 'Accel Scaling',
                 'AFG VIETNAM', 'AI-Assisted Coaching and Mentoring Tools', 'Aim up Vietnam', 
@@ -76,41 +77,70 @@ class AgentRag:
             auth=auth
         )
         
-        # Create tools
-        date_tool = DateExtractionTool()
-        organization_tool = OrganizationValidationTool(organizations=self.organizations)
-        search_tool = SearchMeetingsTool(
-            vector_store=self.vector_store,
-            embedding_service=self.embedding_service
-        )
-        search_by_org_tool = SearchMeetingsByOrganizationTool(
+        search_travel_tool = SearchTravelPackagesTool(
             vector_store=self.vector_store,
             embedding_service=self.embedding_service
         )
         
-        # Create llama_index FunctionTool objects
-        search_function_tool = FunctionTool.from_defaults(
-            name=search_tool.name,
-            description=search_tool.description,
-            fn=search_tool.__call__
-        )
-        
-        search_by_org_function_tool = FunctionTool.from_defaults(
-            name=search_by_org_tool.name,
-            description=search_by_org_tool.description,
-            fn=search_by_org_tool.__call__
-        )
-        
-        date_function_tool = FunctionTool.from_defaults(
-            name=date_tool.name,
-            description=date_tool.description,
-            fn=date_tool.__call__
-        )
-        
-        organization_function_tool = FunctionTool.from_defaults(
-            name=organization_tool.name,
-            description=organization_tool.description,
-            fn=organization_tool.__call__
+        # Define a wrapper function to return string output for the agent
+        def _search_travel_packages_agent_wrapper(
+                location_input: str,
+                duration_input: str,
+                budget_input: str,
+                transportation_input: str,
+                accommodation_input: str,
+                food_input: str,
+                activities_input: str,
+                notes_input: str,
+                match_count: int = 10
+                ) -> str:
+            """Internal wrapper to format SearchTravelPackagesTool output as a string for the agent.
+            Searches for relevant travel packages based on multiple criteria.
+            Args:
+                location_input (str): Location preferences or destination.
+                duration_input (str): Duration preferences.
+                budget_input (str): Budget preferences.
+                transportation_input (str): Transportation preferences.
+                accommodation_input (str): Accommodation preferences.
+                food_input (str): Food preferences.
+                activities_input (str): Activities preferences.
+                notes_input (str): Additional notes or preferences.
+                match_count (int): Number of results to return (default 10).
+            """
+            
+            # Call the original tool to get the list of dictionaries
+            results_list = search_travel_tool(
+                location_input=location_input,
+                duration_input=duration_input,
+                budget_input=budget_input,
+                transportation_input=transportation_input,
+                accommodation_input=accommodation_input,
+                food_input=food_input,
+                activities_input=activities_input,
+                notes_input=notes_input,
+                match_count=match_count
+            )
+            
+            # Format the list of dictionaries into a string
+            if not results_list:
+                return "No travel packages found matching your preferences."
+            
+            formatted_results = []
+            for idx, package in enumerate(results_list):
+                package_lines = [f"Package {idx+1}:"]
+                for key, value in package.items():
+                    # Exclude combined_score from the string output
+                    if key != 'combined_score':
+                        package_lines.append(f"  {key}: {value}")
+                formatted_results.append("\n".join(package_lines))
+            
+            return "\n\n".join(formatted_results)
+
+        # Create the FunctionTool using the wrapper function
+        search_travel_function_tool = FunctionTool.from_defaults(
+            name=search_travel_tool.name,
+            description=search_travel_tool.description,
+            fn=_search_travel_packages_agent_wrapper # Use the wrapper function
         )
         
         # Set up memory with configurable token limit
@@ -119,10 +149,7 @@ class AgentRag:
         # Initialize agent with tools
         self.agent = OpenAIAgent.from_tools(
             tools=[
-                search_function_tool,
-                search_by_org_function_tool,
-                date_function_tool,
-                organization_function_tool
+                search_travel_function_tool
             ],
             llm=self.gpt4_llm,
             memory=memory,

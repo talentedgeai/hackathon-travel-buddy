@@ -100,4 +100,75 @@ class SearchMeetingsByOrganizationTool(BaseTool):
                 doc_lines.append(f"  {key}: {value}")
             formatted_results.append("\n".join(doc_lines))
         
-        return "\n\n".join(formatted_results) 
+        return "\n\n".join(formatted_results)
+
+
+class SearchTravelPackagesTool(BaseTool):
+    """Tool for searching travel packages in the database."""
+    
+    def __init__(self, vector_store: SupabaseVectorStore, embedding_service: EmbeddingService):
+        super().__init__(
+            name="SearchTravelPackages",
+            description="Search for relevant travel packages based on multiple criteria. Returns documents formatted from a list of dictionaries."
+        )
+        self.vector_store = vector_store
+        self.embedding_service = embedding_service
+        # Create a default empty vector of size 1536 (OpenAI's embedding size)
+        self.empty_vector = [0.0] * 1536
+    
+    def __call__(self, 
+                location_input: str = Field(description="Location preferences or destination"),
+                duration_input: str = Field(description="Duration preferences"),
+                budget_input: str = Field(description="Budget preferences"),
+                transportation_input: str = Field(description="Transportation preferences"),
+                accommodation_input: str = Field(description="Accommodation preferences"),
+                food_input: str = Field(description="Food preferences"),
+                activities_input: str = Field(description="Activities preferences"),
+                notes_input: str = Field(description="Additional notes or preferences"),
+                match_count: int = Field(default=10, description="Number of results to return")
+                ) -> List[Dict]:
+        """
+        Search for travel packages matching the user's preferences.
+        
+        Args:
+            location_input: Location preferences or destination
+            duration_input: Duration preferences
+            budget_input: Budget preferences
+            transportation_input: Transportation preferences
+            accommodation_input: Accommodation preferences
+            food_input: Food preferences
+            activities_input: Activities preferences
+            notes_input: Additional notes or preferences
+            match_count: Number of results to return
+            
+        Returns:
+            List of travel package dictionaries matching the search criteria
+        """
+        # Get embeddings for each input, using empty vector if input is empty
+        location_embedding = self.embedding_service.get_embedding(location_input) if location_input.strip() else self.empty_vector
+        duration_embedding = self.embedding_service.get_embedding(duration_input) if duration_input.strip() else self.empty_vector
+        budget_embedding = self.embedding_service.get_embedding(budget_input) if budget_input.strip() else self.empty_vector
+        transportation_embedding = self.embedding_service.get_embedding(transportation_input) if transportation_input.strip() else self.empty_vector
+        accommodation_embedding = self.embedding_service.get_embedding(accommodation_input) if accommodation_input.strip() else self.empty_vector
+        food_embedding = self.embedding_service.get_embedding(food_input) if food_input.strip() else self.empty_vector
+        activities_embedding = self.embedding_service.get_embedding(activities_input) if activities_input.strip() else self.empty_vector
+        notes_embedding = self.embedding_service.get_embedding(notes_input) if notes_input.strip() else self.empty_vector
+        
+        # Call the Supabase RPC method for travel package search
+        results = self.vector_store.search_travel_packages(
+            location_vector=location_embedding,
+            duration_vector=duration_embedding,
+            budget_vector=budget_embedding,
+            transportation_vector=transportation_embedding,
+            accommodation_vector=accommodation_embedding,
+            food_vector=food_embedding,
+            activities_vector=activities_embedding,
+            notes_vector=notes_embedding,
+            match_count=match_count
+        )
+        
+        # Return the list of dictionaries directly
+        if not results:
+            return [] # Return empty list if no results
+        
+        return results # Return the raw list of dictionaries 

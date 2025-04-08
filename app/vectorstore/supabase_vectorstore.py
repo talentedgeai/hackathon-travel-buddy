@@ -78,3 +78,43 @@ class SupabaseVectorStore:
             # "user_id_input": user_id,
         }).execute()
         return response.data 
+
+    def search_travel_packages(self, 
+                             location_vector: list,
+                             duration_vector: list,
+                             budget_vector: list,
+                             transportation_vector: list,
+                             accommodation_vector: list,
+                             food_vector: list,
+                             activities_vector: list,
+                             notes_vector: list,
+                             match_count: int = 10):
+        """
+        Search for travel packages based on multiple vector criteria.
+        
+        Args:
+            location_vector: Vector embedding for location preferences
+            duration_vector: Vector embedding for duration preferences
+            budget_vector: Vector embedding for budget preferences
+            transportation_vector: Vector embedding for transportation preferences
+            accommodation_vector: Vector embedding for accommodation preferences
+            food_vector: Vector embedding for food preferences
+            activities_vector: Vector embedding for activities preferences
+            notes_vector: Vector embedding for additional notes/preferences
+            match_count: Maximum number of results to return
+            
+        Returns:
+            List of matching travel packages
+        """
+        response = self.client.rpc("search_travel_packages", {
+            "location_vector": location_vector,
+            "duration_vector": duration_vector,
+            "budget_vector": budget_vector,
+            "transportation_vector": transportation_vector,
+            "accommodation_vector": accommodation_vector,
+            "food_vector": food_vector,
+            "activities_vector": activities_vector,
+            "notes_vector": notes_vector,
+            "match_count": match_count
+        }).execute()
+        return response.data 

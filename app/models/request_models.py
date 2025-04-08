@@ -1,5 +1,6 @@
-from pydantic import BaseModel
-from typing import Any, Dict, Optional, Union
+from pydantic import BaseModel, validator
+from typing import Any, Dict, Optional, Union, List
+import ast
 
 
 class QueryRequest(BaseModel):
@@ -12,6 +13,51 @@ class SignInRequest(BaseModel):
     email: str
     password: str
     display_name: Optional[str] = None
+
+
+class TravelPackage(BaseModel):
+    """Model for a travel package."""
+    id: str
+    title: str
+    provider_id: str
+    location_id: str
+    price: float
+    duration_days: int
+    highlights: List[str]
+    description: str
+    image_url: Optional[str] = None
+    # Note: Vector fields are not included in the response model
+    # as they are used internally for search only
+
+    @validator('highlights', pre=True)
+    def parse_highlights(cls, v):
+        if isinstance(v, str):
+            try:
+                # Handle string representation of list
+                return ast.literal_eval(v)
+            except (ValueError, SyntaxError):
+                # If the string is not a valid Python literal, split by comma
+                return [x.strip() for x in v.strip('[]').split(',')]
+        return v
+
+
+class TravelPackageSearchRequest(BaseModel):
+    """Request model for the /search-travel-packages endpoint."""
+    location_input: str
+    duration_input: str
+    budget_input: str
+    transportation_input: str
+    accommodation_input: str
+    food_input: str
+    activities_input: str
+    notes_input: str
+    match_count: Optional[int] = 10
+
+
+class TravelPackageSearchResponse(BaseModel):
+    """Response model for the /search-travel-packages endpoint."""
+    packages: List[TravelPackage]
+    total_count: int
 
 
 class APIResponse(BaseModel):
