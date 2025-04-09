@@ -107,14 +107,14 @@ class SupabaseVectorStore:
             List of matching travel packages
         """
         response = self.client.rpc("search_travel_packages", {
-            "location_vector": location_vector,
-            "duration_vector": duration_vector,
-            "budget_vector": budget_vector,
-            "transportation_vector": transportation_vector,
-            "accommodation_vector": accommodation_vector,
-            "food_vector": food_vector,
-            "activities_vector": activities_vector,
-            "notes_vector": notes_vector,
+            "location_vector_input": location_vector,
+            "duration_vector_input": duration_vector,
+            "budget_vector_input": budget_vector,
+            "transportation_vector_input": transportation_vector,
+            "accommodation_vector_input": accommodation_vector,
+            "food_vector_input": food_vector,
+            "activities_vector_input": activities_vector,
+            "notes_vector_input": notes_vector,
             "match_count": match_count
         }).execute()
         return response.data 

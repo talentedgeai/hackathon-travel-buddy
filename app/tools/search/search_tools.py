@@ -113,8 +113,6 @@ class SearchTravelPackagesTool(BaseTool):
         )
         self.vector_store = vector_store
         self.embedding_service = embedding_service
-        # Create a default empty vector of size 1536 (OpenAI's embedding size)
-        self.empty_vector = [0.0] * 1536
     
     def __call__(self, 
                 location_input: str = Field(description="Location preferences or destination"),
@@ -144,15 +142,19 @@ class SearchTravelPackagesTool(BaseTool):
         Returns:
             List of travel package dictionaries matching the search criteria
         """
-        # Get embeddings for each input, using empty vector if input is empty
-        location_embedding = self.embedding_service.get_embedding(location_input) if location_input.strip() else self.empty_vector
-        duration_embedding = self.embedding_service.get_embedding(duration_input) if duration_input.strip() else self.empty_vector
-        budget_embedding = self.embedding_service.get_embedding(budget_input) if budget_input.strip() else self.empty_vector
-        transportation_embedding = self.embedding_service.get_embedding(transportation_input) if transportation_input.strip() else self.empty_vector
-        accommodation_embedding = self.embedding_service.get_embedding(accommodation_input) if accommodation_input.strip() else self.empty_vector
-        food_embedding = self.embedding_service.get_embedding(food_input) if food_input.strip() else self.empty_vector
-        activities_embedding = self.embedding_service.get_embedding(activities_input) if activities_input.strip() else self.empty_vector
-        notes_embedding = self.embedding_service.get_embedding(notes_input) if notes_input.strip() else self.empty_vector
+        # Helper function to check if input is valid
+        def is_valid_input(input_str: str) -> bool:
+            return input_str is not None and len(input_str.strip()) > 1
+
+        # Get embeddings for each input, using "empty string" embedding if input is invalid
+        location_embedding = self.embedding_service.get_embedding(location_input) if is_valid_input(location_input) else self.embedding_service.get_embedding("empty string")
+        duration_embedding = self.embedding_service.get_embedding(duration_input) if is_valid_input(duration_input) else self.embedding_service.get_embedding("empty string")
+        budget_embedding = self.embedding_service.get_embedding(budget_input) if is_valid_input(budget_input) else self.embedding_service.get_embedding("empty string")
+        transportation_embedding = self.embedding_service.get_embedding(transportation_input) if is_valid_input(transportation_input) else self.embedding_service.get_embedding("empty string")
+        accommodation_embedding = self.embedding_service.get_embedding(accommodation_input) if is_valid_input(accommodation_input) else self.embedding_service.get_embedding("empty string")
+        food_embedding = self.embedding_service.get_embedding(food_input) if is_valid_input(food_input) else self.embedding_service.get_embedding("empty string")
+        activities_embedding = self.embedding_service.get_embedding(activities_input) if is_valid_input(activities_input) else self.embedding_service.get_embedding("empty string")
+        notes_embedding = self.embedding_service.get_embedding(notes_input) if is_valid_input(notes_input) else self.embedding_service.get_embedding("empty string")
         
         # Call the Supabase RPC method for travel package search
         results = self.vector_store.search_travel_packages(

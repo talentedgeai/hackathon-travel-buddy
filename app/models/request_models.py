@@ -43,15 +43,21 @@ class TravelPackage(BaseModel):
 
 class TravelPackageSearchRequest(BaseModel):
     """Request model for the /search-travel-packages endpoint."""
-    location_input: str
-    duration_input: str
-    budget_input: str
-    transportation_input: str
-    accommodation_input: str
-    food_input: str
-    activities_input: str
-    notes_input: str
+    location_input: str = ""
+    duration_input: str = ""
+    budget_input: str = ""
+    transportation_input: str = ""
+    accommodation_input: str = ""
+    food_input: str = ""
+    activities_input: str = ""
+    notes_input: str = ""
     match_count: Optional[int] = 10
+
+    @validator('*', pre=True)
+    def empty_string_to_none(cls, v, field):
+        if field.name == 'match_count':
+            return v
+        return v if v is not None else ""
 
 
 class TravelPackageSearchResponse(BaseModel):

@@ -78,6 +78,11 @@ class AppConfig:
         return EnvConfig.get_required("VITE_VITE_APP_SUPABASE_ANON_KEY")
     
     @property
+    def supabase_service_key(self) -> str:
+        """Get the Supabase service key."""
+        return EnvConfig.get_required("SUPABASE_SERVICE_KEY")
+
+    @property
     def debug(self) -> bool:
         """Check if debug mode is enabled."""
         return EnvConfig.is_debug()
