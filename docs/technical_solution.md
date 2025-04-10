@@ -33,6 +33,7 @@ The system consists of four major component groups:
    - Recommendation Engine powered by LlamaIndex/RAG (Handles matching for all user criteria, including location, duration, budget, food, activities, and included accommodation/transportation preferences)
    - Accommodation Engine leveraging LLM with internet search (Secondary engine for finding alternative/external accommodation or details when not covered adequately in tour packages)
    - WhatsApp Integration Service for messaging
+   - Vector Data Processing Pipeline for transforming raw tour data and user preferences into vector embeddings for semantic matching
 
 3. **Data Stores**:
    - Supabase Database (PostgreSQL with vector capabilities)
@@ -59,6 +60,7 @@ graph TD
         RecEngine["Recommendation Engine (Primary: All Criteria)"]
         AccEngine["Accommodation Engine (Secondary: External Search)"]
         WhatsAppService["WhatsApp Integration Service"]
+        VectorProc["Vector Data Processing Pipeline"]
     end
 
     subgraph "Data Stores"
@@ -88,6 +90,11 @@ graph TD
 
     WhatsAppService -- Interacts with --> WhatsAppAPI
     WhatsAppService -- Uses --> API
+
+    TourProviderData -- Data Feed --> VectorProc
+    VectorProc -- Stores Vectors --> DB
+    API -- User Preferences --> VectorProc
+    VectorProc -- Vectorized Data --> RecEngine
 
     RecEngine -- "Uses (Vector Search)" --> DB
     RecEngine -- Uses --> TourProviderData[Ingested Tour Data]
@@ -180,16 +187,190 @@ User preferences are matched against tour package attributes using the following
   - Media handling for tour images
   - Conversation flow management
 
+#### 3.2.5 Vector Data Processing Pipeline
+- **Functionality**: Transforms raw tour data and user preferences into vector embeddings for semantic matching
+- **Key Features**:
+  - Data extraction and cleansing from various tour provider sources
+  - Text normalization and feature extraction
+  - Vector embedding generation using language models
+  - Batch processing for tour data ingestion
+  - Real-time embedding for user queries and preferences
+  - Vector storage and indexing for efficient similarity search
+
+**Vector Processing Workflow:**
+
+1. **Data Collection & Preprocessing**:
+   - Extract structured and unstructured data from tour provider sources
+   - Clean and normalize text (remove special characters, standardize formats)
+   - Parse and segment data into relevant attribute categories (location, activities, etc.)
+   - Apply language detection and translation for multilingual content
+
+2. **Feature Extraction & Enrichment**:
+   - Identify key entities (locations, activities, amenities)
+   - Extract temporal information (duration, seasonal availability)
+   - Categorize numerical attributes (price ranges, group sizes)
+   - Apply domain-specific feature engineering (travel-specific attributes)
+
+3. **Vector Embedding Generation**:
+   - Generate embeddings for each attribute category using specialized language models
+   - For tour packages:
+     - Create separate embedding vectors for each attribute (location_vector, activity_vector, etc.)
+     - Process using batch pipeline during data ingestion
+   - For user preferences:
+     - Create corresponding preference vectors at query time
+     - Apply same embedding models as used for tour data
+
+4. **Vector Storage & Indexing**:
+   - Store embeddings in pgvector-enabled Supabase database
+   - Create appropriate indices for efficient similarity search
+   - Implement vector compression techniques for storage optimization
+   - Setup scheduled reindexing for performance maintenance
+
+5. **Similarity Search & Ranking**:
+   - Execute multi-dimensional similarity matching between user preference vectors and tour package vectors
+   - Apply weighted scoring based on attribute importance
+   - Optimize query execution for performance at scale
+
+**Implementation Technology**:
+- **Embedding Models**: SentenceTransformers or similar models fine-tuned for travel domain
+- **Vector Dimension**: 384-1536 dimensions based on model selection
+- **Similarity Metrics**: Cosine similarity for semantic matching
+- **Processing Framework**: Python-based data pipeline with batch and real-time processing capabilities
+- **Storage**: pgvector extension in Supabase PostgreSQL
+
 ### 3.3 Data Stores
 
 #### 3.3.1 Supabase Database
 - **Functionality**: Primary data repository for all application data
 - **Key Features**:
   - PostgreSQL with pgvector extension for vector operations
-  - Relational schema for users, locations, providers, and tour packages
-  - Vector embeddings storage for semantic search
+  - Relational schema for users, travel packages, locations, and providers
+  - Vector embeddings storage for semantic search (using OpenAI text-embedding-3-small model)
   - Real-time subscription capabilities
   - Built-in authentication functionality
+  - Custom RPC functions for vector similarity search
+
+**Core Tables:**
+- **providers**: Tour provider information
+  - id (uuid, NOT NULL): Primary key
+  - name (text, NOT NULL): Provider name
+  - logo_url (text): Provider logo image URL
+  - description (text): Detailed provider description
+  - website (text): Provider website URL
+- **locations**: Geographic location data
+  - id (uuid, NOT NULL): Primary key
+  - name (text, NOT NULL): Location name
+  - country (text): Country where location is situated
+  - tags (array): Array of keywords/categories for the location
+  - description (text): Detailed location description
+  - image_url (text): Location image URL
+- **travel_packages**: Tour package information with vector embeddings
+  - Links providers with locations through foreign keys
+  - Contains details about specific tour offerings
+- **users**: User profile information (managed by Supabase Auth)
+- **user_interests**: User preferences for locations and travel criteria
+  - Stores location preferences with priority levels and budget constraints
+- **user_requests**: Tracks user travel requests
+  - Links to multiple user interests entries
+
+**Vector-enabled Search**: Specialized RPC functions for semantic searching:
+- `search_travel_packages`: Multi-dimensional vector search based on weighted criteria
+
+#### 4.5.3 Vector Database Schema
+
+The Supabase database implements the following entity-relationship structure for vector data:
+
+```mermaid
+erDiagram
+    users ||--o{ user_requests : "makes"
+    user_requests ||--o{ user_interests : "contains"
+    providers ||--o{ travel_packages : "offers"
+    locations ||--o{ travel_packages : "contains"
+    locations ||--o{ user_interests : "referenced in"
+    
+    users {
+        uuid id PK
+        string email
+        string display_name
+        timestamp created_at
+    }
+    
+    user_interests {
+        uuid id PK
+        uuid location_id FK
+        integer priority_level
+        decimal budget
+        string activities
+        string notes
+        integer order_index
+        uuid request_id FK
+        timestamp created_at
+    }
+    
+    user_requests {
+        uuid id PK
+        uuid user_id FK
+        timestamp created_at
+    }
+    
+    travel_packages {
+        uuid id PK
+        string title
+        uuid provider_id FK
+        uuid location_id FK
+        decimal price
+        integer duration_days
+        string[] highlights
+        string description
+        string image_url
+        vector(1536) location_vector
+        vector(1536) duration_vector
+        vector(1536) budget_vector
+        vector(1536) transportation_vector
+        vector(1536) food_vector
+        vector(1536) activities_vector
+        vector(1536) notes_vector
+        string embedding_model
+        string embedding_version
+        timestamp created_at
+        timestamp last_updated
+    }
+    
+    locations {
+        uuid id PK
+        string name
+        string country
+        string[] tags
+        string description
+        string image_url
+        timestamp created_at
+    }
+    
+    providers {
+        uuid id PK
+        string name
+        string logo_url
+        string description
+        string website
+        timestamp created_at
+    }
+```
+
+**Key Vector Functionality:**
+
+The system utilizes OpenAI's `text-embedding-3-small` model which produces 1536-dimensional vectors for all embeddings. These vectors are stored in the database tables using the pgvector extension, which enables efficient similarity search operations.
+
+Vector search is implemented through a specialized RPC function called `search_travel_packages` that performs a weighted ranking of travel packages based on similarity across multiple attribute dimensions:
+
+- Location similarity (45.5% weight)
+- Duration similarity (18.2% weight)
+- Budget similarity (9.1% weight)
+- Transportation similarity (9.1% weight)
+- Food similarity (4.5% weight)
+- Activities similarity (4.5% weight)
+- Accommodation & Notes similarity (9.0% weight)
+
+The search function uses cosine similarity (represented by the `<=>` operator in pgvector) and calculates a weighted sum of similarities across all dimensions to produce a final ranking score. The database is optimized with IVFFLAT indices on key vector fields to enable fast similarity search even with large datasets.
 
 ### 3.4 External Systems
 
@@ -208,10 +389,12 @@ sequenceDiagram
     participant User
     participant WebApp
     participant API
+    participant VectorProc as Vector Processing
     participant RecEngine
     participant WhatsAppService
     participant WhatsAppAPI
     participant ExternalTourSite
+    participant DB as Supabase DB
 
     User->>WebApp: Logs in (via Facebook redirect)
     WebApp->>API: Authenticate User (token)
@@ -219,8 +402,18 @@ sequenceDiagram
 
     User->>WebApp: Enters Tour Preferences (Location, Duration, Budget, etc.)
     WebApp->>API: Save/Update User Preferences & Request Tours
+    
+    API->>VectorProc: Process User Preferences
+    VectorProc->>VectorProc: Convert preferences to vector embeddings
+    VectorProc->>DB: Store user preference vectors
+    VectorProc-->>API: Vectorization Complete
+    
     API->>RecEngine: Get Tour Recommendations (User Prefs)
+    RecEngine->>DB: Vector similarity search
+    DB-->>RecEngine: Return matching tour packages
+    RecEngine->>RecEngine: Apply weighted scoring algorithm
     RecEngine->>API: Return Ranked Tour List
+    
     API->>WhatsAppService: Send Recommendations (User ID, Tours)
     WhatsAppService->>WhatsAppAPI: Format & Send Message
     WhatsAppAPI->>User: Delivers Tour Recommendations via WhatsApp
@@ -232,6 +425,29 @@ sequenceDiagram
 
     User->>ExternalTourSite: Completes Booking & Payment
     ExternalTourSite-->>User: Booking Confirmation (outside Travel Buddy scope initially)
+```
+
+**Tour Package Data Ingestion Flow:**
+```mermaid
+sequenceDiagram
+    participant TourProvider as Tour Provider Sources
+    participant API
+    participant VectorProc as Vector Processing
+    participant LLMProvider
+    participant DB as Supabase DB
+
+    TourProvider->>API: Provide Tour Package Data
+    API->>VectorProc: Process Tour Package Data
+    
+    VectorProc->>VectorProc: Data Collection & Preprocessing
+    VectorProc->>VectorProc: Feature Extraction & Enrichment
+    VectorProc->>LLMProvider: Request Vector Embeddings
+    LLMProvider-->>VectorProc: Return Vector Embeddings
+    
+    VectorProc->>VectorProc: Generate specialized attribute vectors
+    VectorProc->>DB: Store Tour Package Data with Vectors
+    DB-->>VectorProc: Confirm Data Storage
+    VectorProc-->>API: Data Processing Complete
 ```
 
 **Accommodation Recommendation Flow:**
@@ -291,6 +507,72 @@ sequenceDiagram
    - Processes results to extract relevant accommodation options.
    - Ranks and summarizes accommodation options.
 4. Recommendations are formatted and sent to user via WhatsApp/WebApp.
+
+### 4.5 Vector Data Processing Flow
+
+The Vector Data Processing Pipeline is a critical component that enables the semantic matching of user preferences with tour packages. It consists of two primary workflows:
+
+#### 4.5.1 Tour Package Data Vectorization (Batch Processing)
+
+1. **Data Ingestion**:
+   - Tour package data is collected from various providers and fed into the system
+   - Data is structured into standard formats for processing
+   - Metadata is extracted and normalized (locations, durations, prices, etc.)
+
+2. **Text Preprocessing**:
+   - Raw text descriptions are cleaned (removing HTML, special characters, etc.)
+   - Text is tokenized and normalized
+   - Language detection and translation are applied for multilingual content
+   - Named entities (locations, attractions, etc.) are identified
+
+3. **Feature Segmentation**:
+   - Package data is segmented into distinct attribute categories:
+     - Location information
+     - Duration and schedule details
+     - Budget and pricing information
+     - Transportation options
+     - Food and cuisine details
+     - Activities and experiences
+     - Accommodation details and special notes
+
+4. **Vector Generation**:
+   - Each attribute category is processed through specialized language models
+   - Multiple embedding vectors are generated for each tour package:
+     - `location_vector`: Embedding of destination information
+     - `duration_vector`: Embedding of temporal aspects
+     - `budget_vector`: Embedding of pricing information
+     - `transportation_vector`: Embedding of transport options
+     - `food_vector`: Embedding of culinary aspects
+     - `activities_vector`: Embedding of experiential elements
+     - `notes_vector`: Embedding of accommodation and additional details
+
+5. **Database Storage**:
+   - Tour package data and associated vector embeddings are stored in Supabase
+   - Vector indices are created and optimized for similarity search
+
+#### 4.5.2 User Preference Vectorization (Real-time Processing)
+
+1. **User Input Collection**:
+   - User preferences are captured through structured input forms in the web app
+   - Preferences are categorized into the same attribute groups as tour packages
+
+2. **Preprocessing**:
+   - User inputs are cleaned and normalized
+   - Default values are applied for missing preferences
+   - Input validation ensures data quality
+
+3. **Real-time Vector Generation**:
+   - User preferences are converted into vector embeddings using the same models as tour packages
+   - Separate vectors are created for each attribute category (location, duration, etc.)
+   - Embedding process is optimized for low-latency response
+
+4. **Temporary Storage**:
+   - User preference vectors are stored in the database and associated with the user's profile
+   - These vectors are used for similarity matching against tour package vectors
+
+5. **Vector Refreshing**:
+   - User preference vectors are refreshed when preferences are updated
+   - Historical preference vectors may be retained for personalization purposes
 
 ## 5. Security Considerations
 
@@ -394,11 +676,41 @@ sequenceDiagram
 - **Websockets**: For real-time updates (if needed)
 
 ### 8.3 AI/ML Technologies
-- **Vector Database**: Supabase with pgvector
+- **Vector Database**: Supabase with pgvector extension
+  - Supports efficient storage and retrieval of high-dimensional vector embeddings
+  - Enables cosine similarity search with specialized indices (IVFFLAT, HNSW)
+  - Handles multiple vector columns per record for multi-dimensional attribute matching
+  
 - **Recommendation Framework**: LlamaIndex with RAG architecture
-- **Vector Embeddings**: Sentence transformers or similar
-- **LLM Integration**: OpenAI API or similar service
+  - Provides document indexing and retrieval functionality
+  - Enables hybrid search combining keyword and semantic matching
+  - Supports customized ranking and scoring algorithms
+  - Includes query planning and optimization for complex preference matching
+
+- **Vector Embeddings**: 
+  - **Primary Model**: OpenAI text-embedding-3-small
+    - Produces 1536-dimensional embeddings with excellent semantic understanding
+    - Optimized performance-to-cost ratio for production use
+    - Supports multilingual content for international tourists
+  - **Implementation**: Custom Python embedding service
+    - Handles both batch processing (tour data) and real-time embedding (user queries)
+    - Implements fallback mechanisms for empty or invalid inputs
+    - Uses standardized preprocessing for consistent vector generation
+  - **Usage Pattern**: Multi-dimensional attribute embedding
+    - Separate vectors for each attribute category (location, duration, etc.)
+    - Enables fine-grained similarity matching with weighted importance
+
+- **LLM Integration**: OpenAI API
+  - Powers natural language understanding and generation
+  - Used for enhancing search queries in the Accommodation Engine
+  - Supports multilingual capabilities for international users
+  - Implements rate limiting and fallback mechanisms
+
 - **Search Integration**: Google Custom Search API or similar
+  - Enables web search for external accommodation options
+  - Provides structured results for further processing
+  - Includes geolocation-aware search capabilities
+  - Supports filtering and result customization
 
 ### 8.4 Data Storage
 - **Primary Database**: PostgreSQL (via Supabase)
