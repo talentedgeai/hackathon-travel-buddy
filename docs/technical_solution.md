@@ -881,3 +881,73 @@ The architecture is designed with modularity in mind, allowing components to evo
 The detailed data flow diagrams and database schema ensure that all stakeholders understand how data moves through the system, and the monitoring, deployment, and risk mitigation strategies provide a solid foundation for building and maintaining the Travel Buddy application.
 
 Would you like me to elaborate on any particular aspect of this technical architecture solution?
+
+```mermaid
+flowchart TD
+    subgraph "User Input Processing"
+        A[User Enters Preferences] --> B[Convert to Vector Embeddings]
+        B --> C[Store User Preference Vectors]
+    end
+
+    subgraph "Recommendation Engine"
+        D[Receive Request for Recommendations] --> E[Fetch User Preference Vectors]
+        E --> F[Fetch Candidate Tour Packages]
+        F --> G[Calculate Similarity Scores]
+        
+        subgraph "Similarity Calculation"
+            G --> G1[Location Similarity]
+            G --> G2[Duration Similarity]
+            G --> G3[Budget Similarity]
+            G --> G4[Transportation Similarity]
+            G --> G5[Food Similarity]
+            G --> G6[Activities Similarity]
+            G --> G7[Accommodation Similarity]
+            
+            G1 --> H[Apply Weighted Scoring Algorithm]
+            G2 --> H
+            G3 --> H
+            G4 --> H
+            G5 --> H
+            G6 --> H
+            G7 --> H
+        end
+        
+        H --> I[Sort Results by Total Score]
+        I --> J[Return Top N Recommendations]
+    end
+    
+    subgraph "Vector Database (pgvector)"
+        K[Indexed Tour Package Vectors]
+        L[User Preference Vectors]
+        
+        K -- "Cosine Similarity Search<br/>(<=> operator)" --> G
+        L --> E
+    end
+    
+    subgraph "Weight Distribution"
+        W1[Location: 45.5%]
+        W2[Duration: 18.2%]
+        W3[Budget: 9.1%]
+        W4[Transportation: 9.1%]
+        W5[Food: 4.5%]
+        W6[Activities: 4.5%]
+        W7[Accommodation: 9.0%]
+        
+        W1 --> H
+        W2 --> H
+        W3 --> H
+        W4 --> H
+        W5 --> H
+        W6 --> H
+        W7 --> H
+    end
+    
+    subgraph "Scoring Formula"
+        S["Total Score = (NormSim_Location * 0.455) +<br/> (NormSim_Duration * 0.182) +<br/> (NormSim_Budget * 0.091) +<br/> (NormSim_Transport * 0.091) +<br/> (NormSim_Food * 0.045) +<br/> (NormSim_Activities * 0.045) +<br/> (NormSim_Accommodation * 0.090)"]
+        
+        S --> H
+    end
+    
+    C --> L
+    J --> M[Format Recommendations for Delivery]
+    M --> N[Send to WhatsApp]
